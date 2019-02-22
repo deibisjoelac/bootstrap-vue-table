@@ -1,0 +1,173 @@
+<template>
+	<b-container fluid>
+		<!-- User Interface controls -->
+		
+		<b-row class="m-4">
+			<b-col md="5" class="my-1">
+				<b-form-group label-cols-sm="3" label="Búsqueda" class="mb-0">
+				<b-input-group>
+					<b-form-input v-model="filter" placeholder="¿Qué desea búscaar?" />
+					<b-input-group-append>
+					<b-button :disabled="!filter" @click="filter = ''">Limpiar</b-button>
+					</b-input-group-append>
+				</b-input-group>
+				</b-form-group>
+			</b-col>
+
+			<b-col md="5" class="my-1">
+				<b-form-group label-cols-sm="5" label="Registros por Página" class="mb-0">
+				<b-form-select :options="pageOptions" v-model="perPage" @change="changePerPage"/>
+				</b-form-group>
+			</b-col>
+		</b-row>
+
+		<!-- Main table element -->
+	
+		<transition name="table" mode="out-in">
+			
+			<b-table v-if="!loading"
+				stacked="sm"
+				show-empty
+				:hover="true"
+				:items="items"
+				:fields="fields"
+				:current-page="currentPage"
+				:per-page="perPage"
+				:filter="filter"
+				:sort-by.sync="sortBy"
+				:sort-direction="sortDirection"
+				:empty-text="emptyText"
+
+				
+
+				@filtered="onFiltered"
+				@sort-changed="sortCompare">
+			</b-table>
+			
+		</transition >
+		<!-- <transition name="table" mode="out-in">
+			<b-alert v-model="loading" show variant="primary" class="text-center">Cargando...</b-alert>
+		</transition> -->
+		
+	
+		<b-row >
+			<b-col md="6" class="my-2 mx-auto">
+				<b-pagination align="center"	
+				:total-rows="totalRows"
+				:prev-text="'Anterior'"
+				:next-text="'Siguiente'"
+				:per-page="perPage"
+				:hide-goto-end-buttons="true"
+				:limit="1"
+				v-model="currentPage"
+				@change="changePage"
+				class="my-0"
+				/>
+			</b-col>
+		</b-row>
+		
+  </b-container>
+</template>
+
+<script>
+  
+  export default {
+   	data: () => ({
+		loading: true,
+        items: [],
+        fields: [
+			{ key: 'id', label: 'Id Usuario', sortable: true, sortDirection: 'desc' },
+          	{ key: 'name', label: 'Nombre', sortable: true, sortDirection: 'desc' },
+			{ key: 'email', label: 'Correo Electrónico', sortable: true, class: 'text-center' },
+			{ key: 'created_at', label: 'F. Creación', sortable: true, class: 'text-center' },
+			{ key: 'updated_at', label: 'F. Actualización', sortable: true, class: 'text-center' }
+        ],
+        currentPage: 1,
+        perPage: 5,
+        totalRows: 0,
+        pageOptions: [
+			{ value: 5, text: '5' },
+			{ value: 10, text: '10' },
+			{ value: 25, text: '25' },
+			{ value: 50, text: '50' },
+			{ value: 100, text: '100' },
+			{ value: -1, text: 'Todos' },
+		],
+        sortBy: 'id',
+		sortDirection: 'asc',
+		sortDesc : false,
+		filter: '',
+		emptyText : 'No Hay Registros para mostrar , Intente Nuevamente',
+		
+	}),
+	created(){
+		this.getDataFromApi();
+	},
+    computed: {
+    
+    },
+    methods: {
+		
+		getDataFromApi () {
+			this.loading = true;
+			axios.get(`/api/users/?page=${this.currentPage ? this.currentPage : 1}
+				&per_page=${this.perPage}
+				&sortBy=${this.sortBy}&order=${this.sortDesc ? 'DESC' : 'ASC' }
+				&search=${this.filter ? this.filter : ''}`)
+			.then((response)=>{
+				this.items = response.data.data;
+				this.totalRows = response.data.total;
+				this.currentPage = response.data.current_page;
+				this.perPage = parseInt(response.data.per_page);
+				this.loading = false;
+				
+			})
+		},
+		onFiltered() {
+			
+		},
+		sortCompare(cntx){
+			
+			this.resetContext(cntx);
+			this.myProvider(cntx);
+	
+		},
+
+		resetContext(contexto){
+			this.filter = contexto.filter;
+			this.sortBy = contexto.sortBy;
+			this.sortDesc = ! this.sortDesc;
+			this.currentPage =contexto.currentPage;
+			this.perPage = parseInt(contexto.perPage);
+		},
+		changePage(page){
+			this.currentPage = page;
+			this.perPage = this.currentPage * this.perPage;
+			this.getDataFromApi();
+		},
+		changePerPage(perPage){
+			this.perPage = perPage;
+			this.getDataFromApi();
+		}
+	},
+	watch :{
+		filter(){
+			this.getDataFromApi();
+		}
+	}
+  }
+</script>
+<style scoped>
+.table-enter-active,
+.table-leave-active {
+  transition: opacity 0.5s
+}
+
+.table-enter,
+.table-leave-to
+/* .fade-leave-active in <2.1.8 */
+
+{
+  opacity: 0
+}
+</style>
